@@ -1,0 +1,57 @@
+---
+title: "Homework 1"
+author: "Hsueh-Pin Liu"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Environment
+
+```{r}
+library(readr)
+CA <- read_csv("CaliforniaData.csv")
+MA <- read.csv("massdata.csv")
+```
+
+# Start
+
+## a
+
+```{r}
+#1
+a1 <- lm(MA$totsc8~MA$lnch_pct)
+plot(MA$totsc8~MA$lnch_pct,pch=20)
+abline(a1,col="red")
+#2
+a2 <- lm(MA$totsc8~MA$percap)
+plot(MA$totsc8~MA$percap,pch=20)
+abline(a2,col="red")
+#3
+a3 <- lm(MA$totsc8~MA$pctel)
+plot(MA$totsc8~MA$pctel,pch=20)
+abline(a3,col="red")
+```
+
+## b
+
+```{r}
+plot(a1)
+plot(a2)
+plot(a3)
+```
+
+## c
+
+```{r}
+#1
+c <- lm(MA$totsc8~MA$lnch_pct+MA$percap+MA$pctel)
+summary(c)
+newc <- lm(MA$totsc8~MA$lnch_pct+MA$percap)
+summary(newc)
+```
+
+
