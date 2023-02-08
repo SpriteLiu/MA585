@@ -69,11 +69,11 @@ For TSNW, it has periodicity.
 For MMXT and MMNT, the figure doesn't change much as time changes.
 
 ```{r}
-length(subset(BosData$TSNW,BosData$TSNW>1))/length(BosData$TSNW)
+length(subset(BosData$TSNW,BosData$TSNW>304.8))/length(BosData$TSNW)
 length(subset(BosData$MMXT,BosData$MMXT>80))/length(BosData$MMXT)
 ```
 
-A:38.5% months had total snowfall greater than a foot.
+A:12.5% months had total snowfall greater than a foot.
   70.8% months mean maximum temperature exceeded 80°F.
 
 # Problem 3
