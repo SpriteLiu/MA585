@@ -118,11 +118,11 @@ knitr::include_graphics("4.jpeg")
 
 ```{r}
 #b
-ARMAtoMA(c(1.1,0.3),0,5)
+ARMAtoMA(c(1.1,-0.3),0,5)
 #c
-ARMAacf(ar=c(1.1,0.3),lag.max=5)
+ARMAacf(ar=c(1.1,-0.3),lag.max=5)
 #d
-ARMAacf(ar=c(1.1,0.3),lag.max=5,pacf=T)
+ARMAacf(ar=c(1.1,-0.3),lag.max=5,pacf=T)
 ```
 
 \newpage
