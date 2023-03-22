@@ -183,13 +183,13 @@ According to the results, this model seems to fit well.
 \newpage
 # Problem 6
 
-A stationary time series of length 121 produced sample partial autocorrelation of $\phi_{11}$ = 0.8, $\phi_{22}$ = 0.6, $\phi_{33}$ = 0.08, and $\phi_{44}$ = 0.00. Based on this information alone, what model would we tentatively specify for the series?
+A stationary time series of length 121 produced sample partial autocorrelation of $\phi_{11}$ = 0.8, $\phi_{22}$ = -0.6, $\phi_{33}$ = 0.08, and $\phi_{44}$ = 0.00. Based on this information alone, what model would we tentatively specify for the series?
 
-A: This PACF is significant up to lag 2, so I think it's an AR(2) model. After some calculation, I think the model is X(t)-0.32X(t-1)-0.6X(t-2)=e(t).
+A: This PACF is significant up to lag 2, so I think it's an AR(2) model. After some calculation, I think the model is X(t)-1.28X(t-1)+0.6X(t-2)=e(t).
 
 ```{r}
-ARMAacf(ar=c(0.32,0.6),lag.max=5,pacf=T)
-x=arima.sim(n=121, list(ar=c(0.32,0.6)))
+ARMAacf(ar=c(1.28,-0.6),lag.max=5,pacf=T)
+x=arima.sim(n=121, list(ar=c(1.28,-0.6)))
 pacf(x,main="Sample ACF", ylim = c(-1,1),xaxp=c(0,20,10))
 ```
 
