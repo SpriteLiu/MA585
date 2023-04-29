@@ -1,0 +1,235 @@
+---
+title: "MA 585 Final Project"
+author: "Hsueh-Pin Liu"
+date: "`r Sys.Date()`"
+output: 
+    pdf_document:
+        latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(lubridate)
+library(tseries)
+library(forecast)
+weather2020 <- read_csv("weather_sum_2020.csv")
+weather2021 <- read_csv("weather_sum_2021.csv")
+weather2022 <- read_csv("weather_sum_2022.csv")
+weather2023 <- read_csv("weather_sum_2023.csv")
+stations <- read_csv("stations.csv")
+data <- rbind(weather2020,weather2021,weather2022)
+test <- weather2023
+station <- stations %>% filter(city_station=="RIO DE JANEIRO - JACAREPAGUA")
+#A636
+
+data <- data %>% filter(ESTACAO=="A636")
+test <- test %>% filter(ESTACAO=="A636")
+data1 <- data %>% filter(ESTACAO=="A636"&(`DATA (YYYY-MM-DD)`=="2020-06-13"|`DATA (YYYY-MM-DD)`=="2020-06-15"))
+a <- data1[,-c(1,2)]
+a <- apply(a,2,mean)
+a <- cbind("A636","2020-06-14",t(a))
+a <- as.data.frame(a)
+names(a) <- names(data1)
+data <- rbind(data,a)
+data <- arrange(data,ESTACAO,`DATA (YYYY-MM-DD)`)
+data$temp_avg <- as.numeric(data$temp_avg)
+
+start_date <- as.Date("2020-01-01")
+test_start_date <- as.Date("2023-01-01")
+ts_data <- ts(data$temp_avg, start = c(year(start_date), month(start_date)), frequency = 365)
+ts_test <- ts(test$temp_avg, start = c(year(test_start_date), month(test_start_date)), frequency = 365)
+```
+
+# Introduction
+
+Climate change has become a major concern globally, and Brazil is one of the countries that is most vulnerable to its impacts. As a result, it is important to understand how climate change is affecting different regions of Brazil. This report will focus on the city of Rio de Janeiro and its temperature trends over the past few decades. Temperature is a critical indicator of climate change, and studying its patterns in Rio de Janeiro can help us better understand the impacts of climate change on urban areas in Brazil. Rio de Janeiro is a major city located on the coast of Brazil, with a tropical savanna climate. Due to its location, it is susceptible to rising sea levels and extreme weather events caused by climate change. This report will examine the temperature trends in Rio de Janeiro over the past few decades, identify any significant changes in temperature, and explore the possible drivers of these changes. By studying the temperature patterns in Rio de Janeiro, we can gain insights into the broader impacts of climate change in Brazil and inform policies and adaptation efforts to mitigate its negative effects.
+
+# Dataset
+
+The Brazil Weather Information dataset by INMET, available on Kaggle, provides a comprehensive source of weather data from various locations in Brazil. This report will use the data from the weather_sum_2020 to weather_sum_2023 files, which provide summary statistics for each day of the year, to analyze the temperature patterns in Brazil during the summer months. I use the data from 2020-2022 as train data and the 3 months data from 2023 as test data. By examining this data, we can gain insights into the impacts of climate change on Brazil's temperature and other weather variables. After taking steps to clean the data(Appendix 1), here are the first six rows of the data.
+
+```{r echo=F}
+head(data)
+```
+
+
+
+
+
+
+
+
+
+
+
+# Basic visualization of the data
+
+To gain a better understanding of the temperature trends, I created two time series plots, one using the average temperature and the other showing the highest and lowest temperatures (see Fig 1). These plots appeared stationary and indicated obvious seasonality. To further analyze the data, I used a decomposition plot and a Dickey-Fuller test (refer to Appendix 2). The decomposition plot revealed a clear trend and seasonal pattern, with a seasonal period of 365 days due to the daily nature of the data. Additionally, the Dickey-Fuller test produced a p-value of 0.01, leading to the rejection of the null hypothesis and indicating that the data is indeed stationary. Therefore, no further transformation of the data is required.
+
+```{r Fig1, fig.cap="Average temperature(Left)&Highest and Lowest temperature(Right) Time Series Plot",echo=F, warning=F, fig.height=2,fig.width=4}
+data$temp_avg <- as.numeric(data$temp_avg)
+data$temp_max <- as.numeric(data$temp_max)
+data$temp_min <- as.numeric(data$temp_min)
+a <- ggplot(data=data,aes(x=`DATA (YYYY-MM-DD)`,y=temp_avg))+geom_line()+labs(title = "Avg Temperature in Rio De Janeiro",x="Time",y = "Temperature")+theme_classic()+theme(plot.title = element_text(size = 6),axis.text=element_text(size=6),axis.title.x=element_text(size=6),axis.title.y=element_text(size=6))
+b <- ggplot(data=data,aes(x=`DATA (YYYY-MM-DD)`))+geom_line(aes(y=temp_max,color="blue"))+geom_line(aes(y=temp_min,color="red"))+ labs(title = "High&Low Temperature in Rio De Janeiro",x="Time",y = "Temperature")+theme_classic()+ scale_color_manual(values = c('blue','red'))+guides(color="none")+theme(plot.title = element_text(size = 6),axis.text=element_text(size=6),axis.title.x=element_text(size=6),axis.title.y=element_text(size=6))
+ggarrange(a,b,ncol=2,nrow=1)
+```
+
+
+
+```{r Fig2, fig.cap="Decomposition Plot",echo=F, warning=F, fig.height=3.5,fig.width=6}
+dec <- decompose(ts_data,type="additive")
+plot(dec,xaxt="n",cex.lab=0.75)
+axis(side = 1, at = c(2020:2023), labels = c("2020", "2021","2022","2023"),lwd=0)
+```
+
+
+
+
+
+
+# Modeling
+
+## Model-based Forecast   
+
+### Choosing the appropriate model
+
+To forecast the time series data, I analyzed its ACF and PACF plots. The highly autocorrelated nature of the data made it challenging, so I tried different methods like log transformation(Appendix 3) and differencing(Appendix 4). However, none of them proved to be effective, so I decided to build the model using the original data despite its autocorrelation(Fig 3).
+
+```{r Fig3, fig.cap="ACF and PACF Plots",echo=F, warning=F, fig.height=2.5,fig.width=6}
+par(mfrow=c(1,2)) 
+acf(ts_data)
+pacf(ts_data)
+```
+
+Due to the seasonality present in the data, I have employed an SARIMA model to capture its patterns. To identify the optimal model fit, I have utilized the auto.arima function, and the resulting output suggests that the most suitable model is SARIMA $(2,0,0)\times(0,1,0)_{365}$, with the lowest AICc value. Hence, I will be using this model to forecast the time series.
+
+```{r include=F}
+auto.arima(ts_data,trace=T)
+```
+
+\begin{tabular}{|l|c|}
+\hline Model&AICc\\
+\hline $(1,0,0)\times(0,1,0)_{365}$&2280.888\\
+\hline $(2,0,0)\times(0,1,0)_{365}$&2622.169\\
+\hline $(3,0,0)\times(0,1,0)_{365}$&2265.05\\
+\hline $(2,0,1)\times(0,1,0)_{365}$&2264.194\\
+\hline $(1,0,1)\times(0,1,0)_{365}$&2263.032\\
+\hline $(3,0,1)\times(0,1,0)_{365}$&2265.535\\
+\hline
+\end{tabular}
+
+### Forecasting
+
+And then I use the model to forecast the temperature in the next three months(Fig 4) in order to compare with the test data, and the result seems reliable.
+
+```{r Fig4, fig.cap="Forecast of the Model",echo=F, warning=F, fig.height=2.5,fig.width=6}
+forecast1 <- forecast(ts_data,h=90)
+plot(forecast1,main="Forecast of SARIMA(2,0,0)(0,1,0)[365]",xaxt="n")
+axis(side = 1, at = c(2020:2023), labels = c("2020", "2021","2022","2023"))
+```
+
+### Diagnostics
+
+The diagnostic plots(Fig 5) indicate that the residuals and p-values are not significant, suggesting that the model is appropriate.
+
+```{r Fig5, fig.cap="Diagnostic Plots",echo=F, warning=F, fig.height=4,fig.width=8}
+fit=Arima(ts_data,order=c(2,0,0),
+seasonal=list(order=c(0,1,0),period=365),lambda=0)
+tsdiag(fit)
+```
+
+## Holt-Winters Forecasting
+
+Given the clear periodicity of the data, utilizing the Holt-Winters smoothing technique to forecast the data is a dependable approach. By incorporating the average temperature, a smoothing model can be generated to accurately predict the temperature. (Fig 6) The plot also looks reliable.
+
+```{r Fig6, echo=F, fig.cap="Holt-Winters Forecasts", fig.height=3, fig.width=6, warning=FALSE}
+fit <- HoltWinters(ts_data, seasonal = "multiplicative")
+forecast2 <- forecast(fit, h = 90)
+plot(forecast2,xaxt="n")
+axis(side = 1, at = c(2020:2023), labels = c("2020", "2021","2022","2023"))
+```
+
+# Compare the forecasts accuracy
+
+Both the SARIMA and seasonal Holt-Winters models appear to be viable options for forecasting. However, to determine which model performs better, we need to evaluate their MAE, RMSE, and MAPE. After analyzing the data, we can see from the table below that the SARIMA model outperforms the Holt-Winters model in terms of accuracy.
+
+```{r include=F}
+m1 <- forecast1$mean
+m2 <- forecast2$mean
+mae1 <- mean(abs(ts_test-m1))
+rmse_1 <- sqrt(mean((ts_test - m1)^2))
+mape_1 <- mean(abs(ts_test-m1)/ts_test) * 100
+mae2 <- mean(abs(ts_test-m2))
+rmse_2 <- sqrt(mean((ts_test - m2)^2))
+mape_2 <- mean(abs(ts_test-m2)/ts_test) * 100
+```
+
+\begin{tabular}{|l|c|c|}
+\hline Criteria&SARIMA&Holt-Winters\\
+\hline MAE (Mean Absolute Error)&2.352121&3.556123\\
+\hline RMSE (Root Mean Squared Error)&2.721319&2.973317\\
+\hline MAPE (Mean Average Percent Error)&9.026348&13.590407\\
+\hline
+\end{tabular}
+
+# Conclusion
+
+Based on the analysis of the average temperature in Rio de Janeiro from 2020 to 2023, it was found that the SARIMA model performed better than the Holt-Winters method in forecasting future temperatures. The comparison of MAE, RMSE, and MAPE for both methods supported this conclusion.
+For future analysis, it is recommended to focus on the highest and lowest temperatures to gain a better understanding of the climate in Rio de Janeiro. This can be done by analyzing extreme events and their impacts on the local environment, such as heat waves and cold spells.
+
+# References
+
+1.https://www.kaggle.com/datasets/gregoryoliveira/brazil-weather-information-by-inmet?select=stations.csv
+
+2.https://blog.csdn.net/cl1143015961/article/details/44982691
+
+3.https://www.cnblogs.com/statruidong/p/6902315.html
+
+# Appendix
+
+### 1
+
+First I combine the data from 2020 to 2022 together, then I think it's strange that there are only 1095 observations while there are 1096 days, so there must be some data missing, after looking into the data, I don't have the data of 2020-06-14, so I use the average data of 2020-06-13 and 2020-06-15 as the data of 2020-06-14 of A636. Then I use the data from 2023 as the test data.
+
+### 2
+
+```{r echo=F,warning=F}
+adf.test(ts_data)
+```
+
+### 3
+
+```{r echo=F,fig.height=3.5,fig.width=6}
+par(mfrow=c(1,2)) 
+acf(log(ts_data))
+pacf(log(ts_data))
+```
+
+
+
+
+### 4
+
+```{r echo=F,fig.height=3.5,fig.width=6}
+par(mfrow=c(1,2)) 
+acf(diff(ts_data))
+pacf(diff(ts_data))
+```
+
+
+
+
+
+
+
+
+
+
