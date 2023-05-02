@@ -193,6 +193,10 @@ For future analysis, it is recommended to focus on the highest and lowest temper
 
 3.https://www.cnblogs.com/statruidong/p/6902315.html
 
+# Github Link
+
+https://github.com/SpriteLiu/MA585/blob/main/MA%20585%20Final%20Project.Rmd
+
 # Appendix
 
 ### 1
